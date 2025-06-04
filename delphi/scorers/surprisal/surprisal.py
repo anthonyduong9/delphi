@@ -7,8 +7,6 @@ from simple_parsing import field
 from torch.nn.functional import cross_entropy
 from transformers import PreTrainedTokenizer
 
-from delphi.utils import assert_type
-
 from ...latents import ActivatingExample, Example, LatentRecord
 from ..scorer import Scorer, ScorerResult
 from .prompts import BASEPROMPT as base_prompt
@@ -74,24 +72,19 @@ class SurprisalScorer(Scorer):
         Prepare and shuffle a list of samples for classification.
         """
 
-        defaults = {
-            "tokenizer": self.tokenizer,
-        }
-
         assert record.extra_examples is not None, "No extra examples provided"
         samples = examples_to_samples(
             record.extra_examples,
+            tokenizer=self.tokenizer,
             distance=-1,
-            **defaults,
         )
 
-        for i, examples in enumerate(record.test):
-            examples = assert_type(list, examples)
+        for i, example in enumerate(record.test):
             samples.extend(
                 examples_to_samples(
-                    examples,
+                    [example],
+                    tokenizer=self.tokenizer,
                     distance=i + 1,
-                    **defaults,
                 )
             )
 
