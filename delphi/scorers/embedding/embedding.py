@@ -1,9 +1,9 @@
 import asyncio
 import random
 from dataclasses import dataclass
-from typing import NamedTuple
+from typing import NamedTuple, Sequence
 
-from transformers import PreTrainedTokenizer
+from delphi.latents.latents import ActivatingExample, NonActivatingExample
 
 from ...latents import Example, LatentRecord
 from ..scorer import Scorer, ScorerResult
@@ -33,19 +33,17 @@ class EmbeddingScorer(Scorer):
     def __init__(
         self,
         model,
-        tokenizer: PreTrainedTokenizer | None = None,
         verbose: bool = False,
         **generation_kwargs,
     ):
         self.model = model
         self.verbose = verbose
-        self.tokenizer = tokenizer
         self.generation_kwargs = generation_kwargs
 
-    async def __call__(  # type: ignore
-        self,  # type: ignore
-        record: LatentRecord,  # type: ignore
-    ) -> ScorerResult:  # type: ignore
+    async def __call__(
+        self,
+        record: LatentRecord,
+    ) -> ScorerResult:
         samples = self._prepare(record)
 
         random.shuffle(samples)
@@ -56,8 +54,8 @@ class EmbeddingScorer(Scorer):
 
         return ScorerResult(record=record, score=results)
 
-    def call_sync(self, record: LatentRecord) -> list[EmbeddingOutput]:
-        return asyncio.run(self.__call__(record))  # type: ignore
+    def call_sync(self, record: LatentRecord) -> ScorerResult:
+        return asyncio.run(self.__call__(record))
 
     def _prepare(self, record: LatentRecord) -> list[Sample]:
         """
@@ -65,23 +63,21 @@ class EmbeddingScorer(Scorer):
         """
         samples = []
 
-        if record.extra_examples is not None:
-            samples.extend(
-                examples_to_samples(
-                    record.extra_examples,
-                    tokenizer=self.tokenizer,
-                    distance=-1,
-                )
-            )
+        assert (
+            record.extra_examples is not None
+        ), "Extra (non-activating) examples need to be provided"
 
-        for i, example in enumerate(record.test):
-            samples.extend(
-                examples_to_samples(
-                    [example],
-                    tokenizer=self.tokenizer,
-                    distance=i + 1,
-                )
+        samples.extend(
+            examples_to_samples(
+                record.extra_examples,
             )
+        )
+
+        samples.extend(
+            examples_to_samples(
+                record.test,
+            )
+        )
 
         return samples
 
@@ -94,38 +90,38 @@ class EmbeddingScorer(Scorer):
         query_embeding = self.model.encode(explanation_prompt)
         samples_text = [sample.text for sample in samples]
 
-        # # Temporary batching
-        # sample_embedings = []
-        # for i in range(0, len(samples_text), 10):
-        #     sample_embedings.extend(self.model.encode(samples_text[i:i+10]))
         sample_embedings = self.model.encode(samples_text)
         similarity = self.model.similarity(query_embeding, sample_embedings)[0]
 
         results = []
         for i in range(len(samples)):
-            # print(i)
             samples[i].data.similarity = similarity[i].item()
             results.append(samples[i].data)
         return results
 
 
 def examples_to_samples(
-    examples: list[Example],
-    tokenizer: PreTrainedTokenizer | None,
-    **sample_kwargs,
+    examples: Sequence[Example],
 ) -> list[Sample]:
     samples = []
     for example in examples:
-        if tokenizer is not None:
-            text = "".join(tokenizer.batch_decode(example.tokens))
-        else:
-            text = "".join(str(token) for token in example.tokens)
+        assert isinstance(example, ActivatingExample) or isinstance(
+            example, NonActivatingExample
+        )
+        text = "".join(str(token) for token in example.str_tokens)
         activations = example.activations.tolist()
         samples.append(
             Sample(
                 text=text,
                 activations=activations,
-                data=EmbeddingOutput(text=text, **sample_kwargs),
+                data=EmbeddingOutput(
+                    text=text,
+                    distance=(
+                        example.quantile
+                        if isinstance(example, ActivatingExample)
+                        else example.distance
+                    ),
+                ),
             )
         )
 
