@@ -108,6 +108,7 @@ def examples_to_samples(
         assert isinstance(example, ActivatingExample) or isinstance(
             example, NonActivatingExample
         )
+        assert example.str_tokens is not None
         text = "".join(str(token) for token in example.str_tokens)
         activations = example.activations.tolist()
         samples.append(
