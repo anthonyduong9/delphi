@@ -286,7 +286,7 @@ def constructor(
         for toks, acts in zip(token_windows, act_windows)
     ]
     if len(record.examples) < min_examples:
-        logger.info(
+        logger.warning(
             f"Not enough examples to explain the latent: {len(record.examples)}"
         )
         # Not enough examples to explain the latent
@@ -408,7 +408,7 @@ def faiss_non_activation_windows(
 
     # Check if we have enough non-activating examples
     if available_indices.numel() < n_not_active:
-        logger.info("Not enough non-activating examples available")
+        logger.warning("Not enough non-activating examples available")
         return []
 
     # Reshape tokens to get context windows
@@ -430,7 +430,7 @@ def faiss_non_activation_windows(
     ]
 
     if not activating_texts:
-        logger.info("No activating examples available")
+        logger.warning("No activating examples available")
         return []
 
     # Create unique cache keys for both activating and non-activating texts
@@ -626,7 +626,7 @@ def neighbour_non_activation_windows(
         )
         number_examples += examples_used
     if len(all_examples) == 0:
-        logger.info("No examples found, falling back to random non-activating examples")
+        logger.warning("No examples found, falling back to random non-activating examples")
         non_active_indices = not_active_mask.nonzero(as_tuple=False).squeeze()
 
         return random_non_activating_windows(
