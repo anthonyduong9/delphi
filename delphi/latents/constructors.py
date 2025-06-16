@@ -626,7 +626,9 @@ def neighbour_non_activation_windows(
         )
         number_examples += examples_used
     if len(all_examples) == 0:
-        logger.warning("No examples found, falling back to random non-activating examples")
+        logger.warning(
+            "No examples found, falling back to random non-activating examples"
+        )
         non_active_indices = not_active_mask.nonzero(as_tuple=False).squeeze()
 
         return random_non_activating_windows(
