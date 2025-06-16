@@ -4,8 +4,9 @@ from typing import NamedTuple
 
 import torch
 
+from delphi import logger
+
 from ...latents import ActivatingExample, NonActivatingExample
-from ...logger import logger
 
 L = "<<"
 R = ">>"

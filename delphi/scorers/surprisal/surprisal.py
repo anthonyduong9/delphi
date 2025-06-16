@@ -122,7 +122,6 @@ class SurprisalScorer(Scorer):
             tokenized_inputs = tokenizer(
                 full_inputs, return_tensors="pt", padding=True, add_special_tokens=False
             ).to(model.device)
-            # print(tokenized_inputs.input_ids.shape)
 
             # Prepare input for the model (including explanation)
             input_ids = tokenized_inputs.input_ids
@@ -146,7 +145,6 @@ class SurprisalScorer(Scorer):
                 # Remove the trailing zeros from the loss
                 loss = loss[: attention_mask[j].sum().item()]
 
-                # print(len(loss))
                 total_losses.append(loss)
         return total_losses
 
@@ -169,7 +167,6 @@ class SurprisalScorer(Scorer):
         )
         results = []
         for i in range(len(samples)):
-            # print(i)
             samples[i].data.no_explanation = no_explanation_losses[i]
             samples[i].data.explanation = explanation_losses[i]
             results.append(samples[i].data)

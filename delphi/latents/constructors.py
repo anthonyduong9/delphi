@@ -11,6 +11,8 @@ from sentence_transformers import SentenceTransformer
 from torch import Tensor
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
 
+from delphi import logger
+
 from ..config import ConstructorConfig
 from .latents import (
     ActivatingExample,
@@ -25,7 +27,7 @@ model_cache: dict[tuple[str, str], SentenceTransformer] = {}
 def get_model(name: str, device: str = "cuda") -> SentenceTransformer:
     global model_cache
     if (name, device) not in model_cache:
-        print(f"Loading model {name} on device {device}")
+        logger.info(f"Loading model {name} on device {device}")
         model_cache[(name, device)] = SentenceTransformer(name, device=device)
     return model_cache[(name, device)]
 
@@ -284,7 +286,9 @@ def constructor(
         for toks, acts in zip(token_windows, act_windows)
     ]
     if len(record.examples) < min_examples:
-        print(f"Not enough examples to explain the latent: {len(record.examples)}")
+        logger.info(
+            f"Not enough examples to explain the latent: {len(record.examples)}"
+        )
         # Not enough examples to explain the latent
         return None
 
@@ -404,7 +408,7 @@ def faiss_non_activation_windows(
 
     # Check if we have enough non-activating examples
     if available_indices.numel() < n_not_active:
-        print("Not enough non-activating examples available")
+        logger.info("Not enough non-activating examples available")
         return []
 
     # Reshape tokens to get context windows
@@ -426,7 +430,7 @@ def faiss_non_activation_windows(
     ]
 
     if not activating_texts:
-        print("No activating examples available")
+        logger.info("No activating examples available")
         return []
 
     # Create unique cache keys for both activating and non-activating texts
@@ -451,17 +455,17 @@ def faiss_non_activation_windows(
     if cache_enabled and non_activating_cache_file.exists():
         try:
             index = faiss.read_index(str(non_activating_cache_file), faiss.IO_FLAG_MMAP)
-            print(f"Loaded non-activating index from {non_activating_cache_file}")
+            logger.info(f"Loaded non-activating index from {non_activating_cache_file}")
         except Exception as e:
-            print(f"Error loading cached embeddings: {repr(e)}")
+            logger.warning(f"Error loading cached embeddings: {repr(e)}")
 
     if index is None:
-        print("Decoding non-activating tokens...")
+        logger.info("Decoding non-activating tokens...")
         non_activating_texts = [
             "".join(tokenizer.batch_decode(tokens)) for tokens in non_activating_tokens
         ]
 
-        print("Computing non-activating embeddings...")
+        logger.info("Computing non-activating embeddings...")
         non_activating_embeddings = get_model(embedding_model).encode(
             non_activating_texts, show_progress_bar=False
         )
@@ -472,18 +476,22 @@ def faiss_non_activation_windows(
         if cache_enabled:
             os.makedirs(cache_path, exist_ok=True)
             faiss.write_index(index, str(non_activating_cache_file))
-            print(f"Cached non-activating embeddings to {non_activating_cache_file}")
+            logger.info(
+                f"Cached non-activating embeddings to {non_activating_cache_file}"
+            )
 
     activating_embeddings = None
     if cache_enabled and activating_cache_file.exists():
         try:
             activating_embeddings = np.load(activating_cache_file)
-            print(f"Loaded cached activating embeddings from {activating_cache_file}")
+            logger.info(
+                f"Loaded cached activating embeddings from {activating_cache_file}"
+            )
         except Exception as e:
-            print(f"Error loading cached embeddings: {repr(e)}")
+            logger.warning(f"Error loading cached embeddings: {repr(e)}")
     # Compute embeddings for activating examples if not cached
     if activating_embeddings is None:
-        print("Computing activating embeddings...")
+        logger.info("Computing activating embeddings...")
         activating_embeddings = get_model(embedding_model).encode(
             activating_texts, show_progress_bar=False
         )
@@ -491,7 +499,7 @@ def faiss_non_activation_windows(
         if cache_enabled:
             os.makedirs(cache_path, exist_ok=True)
             np.save(activating_cache_file, activating_embeddings)
-            print(f"Cached activating embeddings to {activating_cache_file}")
+            logger.info(f"Cached activating embeddings to {activating_cache_file}")
 
     # Search for the nearest neighbors to each activating example
     collected_indices = set()
@@ -618,7 +626,7 @@ def neighbour_non_activation_windows(
         )
         number_examples += examples_used
     if len(all_examples) == 0:
-        print("No examples found, falling back to random non-activating examples")
+        logger.info("No examples found, falling back to random non-activating examples")
         non_active_indices = not_active_mask.nonzero(as_tuple=False).squeeze()
 
         return random_non_activating_windows(
@@ -655,7 +663,7 @@ def random_non_activating_windows(
     # If this happens it means that the latent is active in every window,
     # so it is a bad latent
     if available_indices.numel() < n_not_active:
-        print("No available randomly sampled non-activating sequences")
+        logger.warning("No available randomly sampled non-activating sequences")
         return []
     else:
         random_indices = torch.randint(

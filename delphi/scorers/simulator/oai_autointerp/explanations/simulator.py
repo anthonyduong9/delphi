@@ -150,8 +150,6 @@ def parse_simulation_response(
         is being simulated
     """
     logprobs = response.prompt_logprobs
-    # print(logprobs)
-    # print(logprobs[1])
     # (gpaulo) this should be done in a smarter way, it really only works with the llama template
     assistant_token = tokenized_prompt[-3]
     # find penultimate assistant token

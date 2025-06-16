@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from functools import partial
 from pathlib import Path
@@ -17,6 +18,7 @@ from transformers import (
     PreTrainedTokenizerFast,
 )
 
+from delphi import logger
 from delphi.clients import Offline, OpenRouter
 from delphi.config import RunConfig
 from delphi.explainers import ContrastiveExplainer, DefaultExplainer, NoOpExplainer
@@ -450,6 +452,16 @@ async def run(
 
 
 if __name__ == "__main__":
+    # Configure logging for CLI usage
+    logger.setLevel(logging.INFO)
+    file_handler = logging.FileHandler("delphi.log")
+    file_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
     parser = ArgumentParser()
     parser.add_arguments(RunConfig, dest="run_cfg")
     args = parser.parse_args()

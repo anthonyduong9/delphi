@@ -12,6 +12,7 @@ from torch import Tensor
 from tqdm import tqdm
 from transformers import PreTrainedModel
 
+from delphi import logger
 from delphi.config import CacheConfig
 from delphi.latents.collect_activations import collect_activations
 
@@ -298,7 +299,7 @@ class LatentCache:
                 pbar.update(1)
                 pbar.set_postfix({"Total Tokens": f"{total_tokens:,}"})
 
-        print(f"Total tokens processed: {total_tokens:,}")
+        logger.info(f"Total tokens processed: {total_tokens:,}")
         self.cache.save()
         self.save_firing_counts()
 
@@ -374,8 +375,8 @@ class LatentCache:
                     masked_locations = masked_locations.astype(np.uint16)
                 else:
                     masked_locations = masked_locations.astype(np.uint32)
-                    print(
-                        "Warning: Increasing the number of splits might reduce the"
+                    logger.warning(
+                        "Increasing the number of splits might reduce the"
                         "memory usage of the cache."
                     )
 
@@ -399,10 +400,10 @@ class LatentCache:
         to the console.
         """
         assert self.width is not None, "Width must be set before generating statistics"
-        print("Feature statistics:")
+        logger.info("Feature statistics:")
         # Token frequency
         for module_path in self.cache.latent_locations.keys():
-            print(f"# Module: {module_path}")
+            logger.info(f"# Module: {module_path}")
             generate_statistics_cache(
                 self.cache.tokens[module_path],
                 self.cache.latent_locations[module_path],
@@ -493,7 +494,7 @@ def generate_statistics_cache(
     num_alive = counts.shape[0]
     fraction_alive = num_alive / width
     if verbose:
-        print(f"Fraction of latents alive: {fraction_alive:%}")
+        logger.info(f"Fraction of latents alive: {fraction_alive:%}")
     # Compute densities of latents
     densities = counts / total_n_tokens
 
@@ -502,8 +503,12 @@ def generate_statistics_cache(
     # How many fired more than 10% of the time
     ten_percent = (densities > 0.1).sum() / width
     if verbose:
-        print(f"Fraction of latents fired more than 1% of the time: {one_percent:%}")
-        print(f"Fraction of latents fired more than 10% of the time: {ten_percent:%}")
+        logger.info(
+            f"Fraction of latents fired more than 1% of the time: {one_percent:%}"
+        )
+        logger.info(
+            f"Fraction of latents fired more than 10% of the time: {ten_percent:%}"
+        )
     # Try to estimate simple feature frequency
     split_indices = torch.cumsum(counts, dim=0)
     activation_splits = torch.tensor_split(sorted_activations, split_indices[:-1])
@@ -525,8 +530,10 @@ def generate_statistics_cache(
     single_token_fraction = maybe_single_token_features / num_alive
     strong_token_fraction = num_single_token_features / num_alive
     if verbose:
-        print(f"Fraction of weak single token latents: {single_token_fraction:%}")
-        print(f"Fraction of strong single token latents: {strong_token_fraction:%}")
+        logger.info(f"Fraction of weak single token latents: {single_token_fraction:%}")
+        logger.info(
+            f"Fraction of strong single token latents: {strong_token_fraction:%}"
+        )
 
     return CacheStatistics(
         frac_alive=float(fraction_alive),

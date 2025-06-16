@@ -3,7 +3,8 @@ from asyncio import sleep
 
 import httpx
 
-from ..logger import logger
+from delphi import logger
+
 from .client import Client, Response
 from .types import ChatFormatRequest
 
@@ -30,7 +31,7 @@ class OpenRouter(Client):
         self.temperature = temperature
         timeout_config = httpx.Timeout(5.0)
         self.client = httpx.AsyncClient(timeout=timeout_config)
-        print("WARNING: We currently don't support logprobs for OpenRouter")
+        logger.warning("We currently don't support logprobs for OpenRouter")
 
     def postprocess(self, response):
         response_json = response.json()

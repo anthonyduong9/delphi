@@ -60,7 +60,7 @@ class ContrastiveExplainer(Explainer):
                 response_text = response
             explanation = self.parse_explanation(response_text)
             if self.verbose:
-                from ..logger import logger
+                from delphi import logger
 
                 logger.info(f"Explanation: {explanation}")
                 logger.info(f"Messages: {messages[-1]['content']}")
@@ -68,7 +68,7 @@ class ContrastiveExplainer(Explainer):
 
             return ExplainerResult(record=record, explanation=explanation)
         except Exception as e:
-            from ..logger import logger
+            from delphi import logger
 
             logger.error(f"Explanation parsing failed: {repr(e)}")
             return ExplainerResult(

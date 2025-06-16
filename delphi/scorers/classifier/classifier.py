@@ -7,9 +7,10 @@ from typing import Any, Literal
 
 import numpy as np
 
+from delphi import logger
+
 from ...clients.client import Client, Response
 from ...latents import LatentRecord
-from ...logger import logger
 from ..scorer import Scorer, ScorerResult
 from .sample import ClassifierOutput, Sample
 

@@ -8,9 +8,10 @@ from typing import NamedTuple
 
 import aiofiles
 
+from delphi import logger
+
 from ..clients.client import Client, Response
 from ..latents.latents import ActivatingExample, LatentRecord
-from ..logger import logger
 
 
 class ExplainerResult(NamedTuple):
@@ -127,7 +128,7 @@ async def explanation_loader(
             explanation = json.loads(await f.read())
         return ExplainerResult(record=record, explanation=explanation)
     except FileNotFoundError:
-        print(f"No explanation found for {record.latent}")
+        logger.info(f"No explanation found for {record.latent}")
         return ExplainerResult(record=record, explanation="No explanation found")
 
 

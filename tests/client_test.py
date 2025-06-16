@@ -12,6 +12,7 @@ from transformers import AutoTokenizer
 
 beartype_package("delphi")
 
+from delphi import logger  # noqa: E402
 from delphi.clients import Client, Offline, OpenRouter  # noqa: E402
 from delphi.clients.types import Message  # noqa: E402
 from delphi.explainers import DefaultExplainer  # noqa: E402
@@ -22,7 +23,6 @@ from delphi.latents.latents import (  # noqa: E402
     NonActivatingExample,
 )
 from delphi.latents.samplers import SamplerConfig, sampler  # noqa: E402
-from delphi.logger import logger  # noqa: E402
 from delphi.scorers import DetectionScorer, FuzzingScorer  # noqa: E402
 
 logger.addHandler(logging.StreamHandler())
@@ -57,8 +57,6 @@ async def main(
         elif scorer_type == "detect":
             return DetectionScorer(client, verbose=True)
         # other cases impossible due to beartype
-
-    print("Creating data")
 
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/pythia-160m")
 
@@ -148,7 +146,6 @@ async def main(
     full_prompt: list[Message] = most_recent_generation[0]
     last_element: Message = full_prompt[-1]
     assert "dog" in last_element["content"]
-    print(last_element["content"])
     scorer = make_scorer(client)
     try:
         await scorer(record)
@@ -159,9 +156,6 @@ async def main(
     last_element: Message = full_prompt[-1]
     assert "dog" in last_element["content"]
 
-    print("Mock tests passed")
-
-    print("Loading model")
     if explainer_provider == "offline":
         client = Offline(
             explainer_model,
@@ -181,14 +175,11 @@ async def main(
     explainer = DefaultExplainer(client, verbose=True)
     scorer = make_scorer(client)
 
-    print("Testing explainer")
     explainer_result = await explainer(record)
     assert explainer_result.explanation, "No explanation generated"
     # assert "dog" in explainer_result.explanation.lower(), \
     # f'Explanation does not contain "dog": {explainer_result.explanation}'
-    print("Explanation:", explainer_result.explanation)
 
-    print("Testing scorer")
     scorer_result = await scorer(record)
     accuracy = 0
     n_failing = 0
@@ -201,7 +192,6 @@ async def main(
     accuracy /= len(scorer_result.score)
     assert accuracy > 0.5, f"Accuracy is {accuracy}"
 
-    print("All tests passed!")
     if explainer_provider == "offline":
         assert isinstance(client, Offline)
         await client.close()

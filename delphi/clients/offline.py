@@ -12,7 +12,8 @@ from vllm.distributed.parallel_state import (
     destroy_model_parallel,
 )
 
-from ..logger import logger
+from delphi import logger
+
 from .client import Client, Response
 
 
